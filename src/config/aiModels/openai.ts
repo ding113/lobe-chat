@@ -22,6 +22,90 @@ export const openaiChatModels: AIChatModelCard[] = [
     abilities: {
       functionCall: true,
       reasoning: true,
+      vision: true,
+    },
+    contextWindowTokens: 272_000,
+    description:
+      'GPT-5 是一款完整的推理模型，为分析和复杂任务（如代码生成）提供更深、更丰富的推理能力，支持结构化输出、文本与图像处理，以及函数与工具的并行调用，具备 272K 上下文。',
+    displayName: 'GPT-5',
+    id: 'gpt-5',
+    maxOutput: 128_000,
+    pricing: {
+      input: 1.25,
+      output: 10,
+    },
+    releasedAt: '2025-08-08',
+    settings: {
+      extendParams: ['reasoningEffort'],
+    },
+    type: 'chat',
+  },
+  {
+    abilities: {
+      functionCall: true,
+      reasoning: true,
+      vision: true,
+    },
+    contextWindowTokens: 272_000,
+    description:
+      'GPT-5 mini 面向实时体验，为应用与智能体场景提供推理与工具调用能力，以快速解决客户问题，同时支持结构化输出、文本与图像处理，以及并行工具调用。',
+    displayName: 'GPT-5 mini',
+    id: 'gpt-5-mini',
+    maxOutput: 128_000,
+    pricing: {
+      input: 0.25,
+      output: 2,
+    },
+    releasedAt: '2025-08-08',
+    settings: {
+      extendParams: ['reasoningEffort'],
+    },
+    type: 'chat',
+  },
+  {
+    abilities: {
+      functionCall: true,
+      reasoning: true,
+      vision: true,
+    },
+    contextWindowTokens: 272_000,
+    description:
+      'GPT-5 nano 是全新的推理模型类别，专注于超低延迟与高速度，同时具备出色的问答能力，并支持结构化输出、文本与图像处理、函数与并行工具调用。',
+    displayName: 'GPT-5 nano',
+    id: 'gpt-5-nano',
+    maxOutput: 128_000,
+    pricing: {
+      input: 0.05,
+      output: 0.4,
+    },
+    releasedAt: '2025-08-08',
+    settings: {
+      extendParams: ['reasoningEffort'],
+    },
+    type: 'chat',
+  },
+  {
+    abilities: {
+      functionCall: true,
+      reasoning: true,
+    },
+    contextWindowTokens: 128_000,
+    description:
+      'GPT-5 chat 促进自然的多轮对话与上下文感知的智能体工作流，提供 128K 上下文，支持 Chat Completions 与 Responses API（文本）。',
+    displayName: 'GPT-5 Chat Preview',
+    id: 'gpt-5-chat',
+    maxOutput: 16_384,
+    pricing: {
+      input: 1.25,
+      output: 10,
+    },
+    releasedAt: '2025-08-08',
+    type: 'chat',
+  },
+  {
+    abilities: {
+      functionCall: true,
+      reasoning: true,
       search: true,
       vision: true,
     },
