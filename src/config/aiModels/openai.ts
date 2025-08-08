@@ -88,6 +88,7 @@ export const openaiChatModels: AIChatModelCard[] = [
     abilities: {
       functionCall: true,
       reasoning: true,
+      vision: true,
     },
     contextWindowTokens: 128_000,
     description:
