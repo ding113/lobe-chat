@@ -1,0 +1,132 @@
+name: Sync with Upstream LobeHub
+
+on:
+  schedule:
+    # Run twice daily at 6:00 AM and 6:00 PM UTC
+    - cron: '0 6 * * *'
+    - cron: '0 18 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 # Fetch all history for rebase operations
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+      
+      - name: Add upstream remote
+        run: |
+          # Add upstream remote if it doesn't exist
+          if ! git remote | grep -q upstream; then
+            git remote add upstream https://github.com/lobehub/lobe-chat.git
+          fi
+      
+      - name: Fetch upstream changes
+        run: |
+          git fetch upstream
+          git fetch origin
+      
+      - name: Check for new commits
+        id: check_commits
+        run: |
+          # Check if there are new commits in upstream main
+          UPSTREAM_COMMITS=$(git rev-list --count HEAD..upstream/main)
+          echo "upstream_commits=$UPSTREAM_COMMITS" >> $GITHUB_OUTPUT
+          
+          if [ "$UPSTREAM_COMMITS" -gt 0 ]; then
+            echo "Found $UPSTREAM_COMMITS new commits in upstream"
+          else
+            echo "No new commits in upstream"
+          fi
+      
+      - name: Backup current branch
+        if: steps.check_commits.outputs.upstream_commits != '0'
+        run: |
+          # Create a backup branch before rebasing
+          git branch backup-before-sync-$(date +%Y%m%d-%H%M%S) HEAD
+      
+      - name: Rebase onto upstream
+        if: steps.check_commits.outputs.upstream_commits != '0'
+        run: |
+          # Stash any uncommitted changes
+          git stash push -u -m "Auto-stash before upstream sync"
+          
+          # Rebase current branch onto upstream main
+          git rebase upstream/main || {
+            echo "Rebase failed. Attempting to resolve conflicts..."
+            
+            # Check if there are conflicts
+            if git status --porcelain | grep -q "^UU\|^AA\|^DD"; then
+              echo "Merge conflicts detected. Manual intervention required."
+              git rebase --abort
+              git stash pop || true
+              exit 1
+            fi
+          }
+          
+          # Pop stashed changes if any
+          git stash pop || echo "No stashed changes to restore"
+      
+      - name: Push synchronized changes
+        if: steps.check_commits.outputs.upstream_commits != '0'
+        run: |
+          # Force push the rebased branch (use with caution)
+          git push origin main --force-with-lease
+      
+      - name: Create issue on rebase failure
+        if: failure() && steps.check_commits.outputs.upstream_commits != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Upstream Sync Failed - Manual Intervention Required',
+              body: `The automated upstream sync has failed and requires manual intervention.
+              
+              **Failure Details:**
+              - **Workflow Run:** [${context.runId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              - **Time:** ${new Date().toISOString()}
+              - **Reason:** Rebase conflicts or other synchronization issues
+              
+              **Manual Steps Required:**
+              1. Clone the repository locally
+              2. Add the upstream remote: \`git remote add upstream https://github.com/lobehub/lobe-chat.git\`
+              3. Fetch upstream changes: \`git fetch upstream\`
+              4. Attempt rebase: \`git rebase upstream/main\`
+              5. Resolve any conflicts manually
+              6. Force push: \`git push origin main --force-with-lease\`
+              
+              **Local Changes Preservation:**
+              A backup branch was created before the failed sync attempt. Look for branches named \`backup-before-sync-YYYYMMDD-HHMMSS\`.
+              
+              Please resolve the conflicts and close this issue once sync is complete.`,
+              labels: ['urgent', 'sync-failure', 'maintenance']
+            };
+            
+            await github.rest.issues.create(issue);
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "=== Sync Summary ==="
+          if [ "${{ steps.check_commits.outputs.upstream_commits }}" == "0" ]; then
+            echo "✅ Repository is up to date with upstream"
+          elif [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Successfully synchronized ${{ steps.check_commits.outputs.upstream_commits }} commits from upstream"
+          else
+            echo "❌ Sync failed - manual intervention required"
+          fi
+          
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Remote branches:"
+          git branch -r
