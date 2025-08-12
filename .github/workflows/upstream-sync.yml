@@ -60,6 +60,12 @@ jobs:
           # Stash any uncommitted changes
           git stash push -u -m "Auto-stash before upstream sync"
           
+          # Backup current .github/workflows directory to preserve our workflows
+          echo "Backing up .github/workflows directory..."
+          if [ -d ".github/workflows" ]; then
+            cp -r .github/workflows .github/workflows.backup
+          fi
+          
           # Rebase current branch onto upstream main
           git rebase upstream/main || {
             echo "Rebase failed. Attempting to resolve conflicts..."
@@ -72,6 +78,20 @@ jobs:
               exit 1
             fi
           }
+          
+          # Restore our original .github/workflows directory to avoid permission issues
+          echo "Restoring original .github/workflows directory..."
+          if [ -d ".github/workflows.backup" ]; then
+            rm -rf .github/workflows
+            mv .github/workflows.backup .github/workflows
+            
+            # Add the restored workflows to git if there are any changes
+            if ! git diff --quiet HEAD -- .github/workflows 2>/dev/null; then
+              echo "Workflows directory restored - adding to git"
+              git add .github/workflows
+              git commit -m "Restore original workflow files (exclude from upstream sync)" || echo "No workflow changes to commit"
+            fi
+          fi
           
           # Pop stashed changes if any
           git stash pop || echo "No stashed changes to restore"
